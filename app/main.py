@@ -9,14 +9,20 @@ app = FastAPI()
 
 # this is a model, kung baga ito ang susundan ng pag popost(blueprint)
 class Post(BaseModel):
-    todo_id: int
     todo: str
     content: str
     is_done: bool = False
     is_collaborative: Optional[bool]
+
+class Create_todo(BaseModel):
+    todo_id: int
+    todo: str
+    content: str
+    is_done: bool
+    is_collaborative: Optional[bool]
     created_at: str
     updated_at: str
-
+    
 # static data for testing(localstorage)
 todos = [{
     "todo_id": 1,
@@ -25,7 +31,7 @@ todos = [{
     "is_done": False,
     "is_collaborative": None,
     "created_at": "2026-01-07",
-    "updated_at": "2026-01-07"
+    "updated_at": "2025-01-07"
 },{
     "todo_id": 2,
     "todo": "Being the best",
@@ -53,7 +59,7 @@ def date_now():
 
 def id_generator():
     id = random.randrange(0, 999999)
-    return int(id)
+    return id
 
 # ito na yung pinaka routing lang(URI type shi)
 
@@ -80,8 +86,10 @@ def get_todos_byId(id: int, response: Response):
 @app.post("/todos", status_code=status.HTTP_201_CREATED)
 def create_todo(post: Post):
     
+    # converting the post to be a json format
     todo = post.model_dump()
 
+    # this is the server side(hindi control ng user yung patungkol sa inout na ito)
     todo["todo_id"] = id_generator()
     todo["created_at"] = date_now()
     todo["updated_at"] = date_now()
@@ -90,17 +98,26 @@ def create_todo(post: Post):
     
     return{"todos": todo}
 
-@app.put("/todos/{id}")
+# updating about sa specific todo id number, mag throw lang ng http status kapag walang id na nahanap
+@app.put("/todos/{id}", status_code=status.HTTP_201_CREATED)
 def update_todo(id: int, up_todo: Post):
 
     update = get_todo_id(id)
 
-    update["title"] = up_todo.title
+    if not update:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail=f"The id of {id} is not found on the database")
+
+    update["todo"] = up_todo.todo
     update["content"] = up_todo.content
+    update["is_done"] = up_todo.is_done
+    update["is_collaborative"] = up_todo.is_collaborative
+    update["updated_at"] = date_now()
 
-    return up_todo
+    return {"todo": update}
 
-@app.delete("/todos/{id}")
+# deleting of todo lang
+@app.delete("/todos/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_todo(id: int):
 
     delete_id = find_todo_index(id)
