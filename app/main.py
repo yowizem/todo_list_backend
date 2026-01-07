@@ -58,7 +58,7 @@ def date_now():
     return str(today)
 
 def id_generator():
-    id = random.randrange(0, 999999)
+    id = random.randrange(0, 99999)
     return id
 
 # ito na yung pinaka routing lang(URI type shi)
@@ -66,7 +66,6 @@ def id_generator():
 # getting all todos
 @app.get("/todos", status_code=status.HTTP_200_OK)
 def get_all_todos():
-    print(type(date_now()), type(id_generator()))
     return{"todos": todos}
 
 # getting a specific todo by searching todo_id
