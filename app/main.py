@@ -3,6 +3,9 @@ from typing import Optional
 from pydantic import BaseModel
 from datetime import date
 import random
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from app.config import settings
 
 # documentation by me. the imported libraries is 
 app = FastAPI()
@@ -22,6 +25,17 @@ class Create_todo(BaseModel):
     is_collaborative: Optional[bool]
     created_at: str
     updated_at: str
+
+# connection for the app to db
+
+try:
+    conn = psycopg2.connect(host=settings.HOST, database=settings.DATABASE, user=settings.USER, password=settings.PASSWORD, cursor_factory=RealDictCursor)
+    cursor = conn.cursor()
+    print("database connection was succesfull")
+except Exception as error:
+    print("Connection has failed :(")
+    print("error: ", error)
+
     
 # static data for testing(localstorage)
 todos = [{
@@ -66,6 +80,7 @@ def id_generator():
 # getting all todos
 @app.get("/todos", status_code=status.HTTP_200_OK)
 def get_all_todos():
+    print(settings.HOST)
     return{"todos": todos}
 
 # getting a specific todo by searching todo_id

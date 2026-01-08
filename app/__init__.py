@@ -10,3 +10,6 @@
 
 # unique contraint for column in psql
 
+# pip install psycopg2 - for installing psql connection in python
+
+# pip install python-dotenv for making a env folder using pyhon
