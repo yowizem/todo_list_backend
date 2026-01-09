@@ -2,6 +2,7 @@ from fastapi import FastAPI, Response, status, HTTPException
 from typing import Optional
 from pydantic import BaseModel
 from datetime import date
+import time
 import random
 import psycopg2
 from psycopg2.extras import RealDictCursor
@@ -28,15 +29,17 @@ class Create_todo(BaseModel):
 
 # connection for the app to db
 
+
 try:
-    conn = psycopg2.connect(host=settings.HOST, database=settings.DATABASE, user=settings.USER, password=settings.PASSWORD, cursor_factory=RealDictCursor)
+    conn = psycopg2.connect(host=settings.HOST, database=settings.DATABASE, user=settings.USER, password=settings.DB_PASSWORD, cursor_factory=RealDictCursor)
     cursor = conn.cursor()
     print("database connection was succesfull")
 except Exception as error:
     print("Connection has failed :(")
     print("error: ", error)
+    print(settings.model_dump())
+        
 
-    
 # static data for testing(localstorage)
 todos = [{
     "todo_id": 1,
@@ -80,37 +83,51 @@ def id_generator():
 # getting all todos
 @app.get("/todos", status_code=status.HTTP_200_OK)
 def get_all_todos():
-    print(settings.HOST)
-    return{"todos": todos}
+    cursor.execute("SELECT * FROM todo") 
+    todoss = cursor.fetchall()
+    return{"todos": todoss}
 
 # getting a specific todo by searching todo_id
-@app.get("/todos/{id}") 
+@app.get("/todos/{id}", status_code=status.HTTP_200_OK) 
 def get_todos_byId(id: int, response: Response):
 
-    my_todo = get_todo_id(id)
+    # this commented code is for static data only(localstorage)
 
-    if not my_todo:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                            detail=f"The id: {id} is not found in the database!")
+    # my_todo = get_todo_id(id)
+
+    # if not my_todo:
+    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+    #                         detail=f"The id: {id} is not found in the database!")
     
-    # print(my_todo) -> para lang to sa debugging purposes
-    return{"todo": my_todo}
+    # # print(my_todo) -> para lang to sa debugging purposes
+    # return{"todo": my_todo}
+
+    db_query = f"SELECT * from todo WHERE todo_id = {id}"
+    cursor.execute(db_query)
+    todo = cursor.fetchone()
+    print(id, type(id))
+    return{"todo": todo}
 
 # posting a new todo, basically mag add ka lang ng sarili mong todo
 @app.post("/todos", status_code=status.HTTP_201_CREATED)
 def create_todo(post: Post):
     
     # converting the post to be a json format
-    todo = post.model_dump()
+    # todo = post.model_dump()
 
     # this is the server side(hindi control ng user yung patungkol sa inout na ito)
-    todo["todo_id"] = id_generator()
-    todo["created_at"] = date_now()
-    todo["updated_at"] = date_now()
+    # todo["todo_id"] = id_generator()
+    # todo["created_at"] = date_now()
+    # todo["updated_at"] = date_now()
 
-    todos.append(todo)
-    
-    return{"todos": todo}
+    # todos.append(todo)
+
+    db_query = "INSERT INTO todo (todo, content, is_done, is_collaborative) VALUES (%s, %s, %s , %s) RETURNING *"
+    cursor.execute(db_query, (post.todo, post.content, post.is_done, post.is_collaborative))
+
+    new_todo = cursor.fetchone()
+    conn.commit()
+    return{"todos": new_todo}
 
 # updating about sa specific todo id number, mag throw lang ng http status kapag walang id na nahanap
 @app.put("/todos/{id}", status_code=status.HTTP_201_CREATED)
