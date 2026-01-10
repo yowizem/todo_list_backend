@@ -90,37 +90,20 @@ def get_all_todos():
 # getting a specific todo by searching todo_id
 @app.get("/todos/{id}", status_code=status.HTTP_200_OK) 
 def get_todos_byId(id: int, response: Response):
-
-    # this commented code is for static data only(localstorage)
-
-    # my_todo = get_todo_id(id)
-
-    # if not my_todo:
-    #     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-    #                         detail=f"The id: {id} is not found in the database!")
     
-    # # print(my_todo) -> para lang to sa debugging purposes
-    # return{"todo": my_todo}
-
     db_query = f"SELECT * from todo WHERE todo_id = {id}"
     cursor.execute(db_query)
     todo = cursor.fetchone()
-    print(id, type(id))
+    
+    if todo == None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail=f"The {id} is not found in the database")
+    
     return{"todo": todo}
 
 # posting a new todo, basically mag add ka lang ng sarili mong todo
 @app.post("/todos", status_code=status.HTTP_201_CREATED)
 def create_todo(post: Post):
-    
-    # converting the post to be a json format
-    # todo = post.model_dump()
-
-    # this is the server side(hindi control ng user yung patungkol sa inout na ito)
-    # todo["todo_id"] = id_generator()
-    # todo["created_at"] = date_now()
-    # todo["updated_at"] = date_now()
-
-    # todos.append(todo)
 
     db_query = "INSERT INTO todo (todo, content, is_done, is_collaborative) VALUES (%s, %s, %s , %s) RETURNING *"
     cursor.execute(db_query, (post.todo, post.content, post.is_done, post.is_collaborative))
@@ -131,32 +114,30 @@ def create_todo(post: Post):
 
 # updating about sa specific todo id number, mag throw lang ng http status kapag walang id na nahanap
 @app.put("/todos/{id}", status_code=status.HTTP_201_CREATED)
-def update_todo(id: int, up_todo: Post):
+def update_todo(id: int, post: Post):
 
-    update = get_todo_id(id)
+    sql = f"UPDATE todo SET todo = %s, content = %s, is_done = %s, is_collaborative = %s WHERE todo_id = {id} RETURNING *"
 
-    if not update:
+    cursor.execute(sql, (post.todo, post.content, post.is_done, post.is_collaborative))
+    todo = cursor.fetchone()
+
+    if todo == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                            detail=f"The id of {id} is not found on the database")
-
-    update["todo"] = up_todo.todo
-    update["content"] = up_todo.content
-    update["is_done"] = up_todo.is_done
-    update["is_collaborative"] = up_todo.is_collaborative
-    update["updated_at"] = date_now()
-
-    return {"todo": update}
+                            detail=f"The {id} is not found in the database")
+    conn.commit()
+    return {"todo": post}
 
 # deleting of todo lang
 @app.delete("/todos/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_todo(id: int):
 
-    delete_id = find_todo_index(id)
+    query = f"DELETE FROM todo WHERE todo_id = {id}"
+    todo = cursor.execute(query)
 
-    if delete_id == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,
-                            detail=f"the id {id} is not in the database")
+    if todo == None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail=f"The {id} is not found in the database")
+    
+    conn.commit()
 
-    todos.pop(delete_id)
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
+    return{"respone": "Success"}
