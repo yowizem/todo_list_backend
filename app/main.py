@@ -1,12 +1,15 @@
-from fastapi import FastAPI, Response, status, HTTPException
+from fastapi import FastAPI, Response, status, HTTPException, Depends
 from typing import Optional
 from pydantic import BaseModel
 from datetime import date
-import time
-import random
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from app.config import settings
+from . import models
+from .db import engine, get_db
+from sqlalchemy.orm import Session
+
+models.Base.metadata.create_all(bind=engine)
 
 # documentation by me. the imported libraries is 
 app = FastAPI()
@@ -38,47 +41,11 @@ except Exception as error:
     print("Connection has failed :(")
     print("error: ", error)
     print(settings.model_dump())
-        
 
-# static data for testing(localstorage)
-todos = [{
-    "todo_id": 1,
-    "todo": "Upskill",
-    "content": "learning tobe the best",
-    "is_done": False,
-    "is_collaborative": None,
-    "created_at": "2026-01-07",
-    "updated_at": "2025-01-07"
-},{
-    "todo_id": 2,
-    "todo": "Being the best",
-    "content": "learning tobe the best",
-    "is_done": False,
-    "is_collaborative": None,
-    "created_at": "2026-01-07",
-    "updated_at": "2026-01-07"
-}]
-
-# function for a specific use
-def get_todo_id(id: int):
-    for todo in todos:
-        if todo["todo_id"] == id:
-            return todo
-    
-def find_todo_index(id: int):
-    for i, todo in enumerate(todos):
-        if todo["id"] == id:
-            return i
-        
-def date_now():
-    today = date.today()
-    return str(today)
-
-def id_generator():
-    id = random.randrange(0, 99999)
-    return id
-
-# ito na yung pinaka routing lang(URI type shi)
+@app.get("/sql")
+def test_todo(db: Session = Depends(get_db)):
+    todo = db.query(models.Post).all()
+    return {"data": todo}
 
 # getting all todos
 @app.get("/todos", status_code=status.HTTP_200_OK)

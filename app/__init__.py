@@ -13,3 +13,5 @@
 # pip install psycopg2 - for installing psql connection in python
 
 # pip install python-dotenv for making a env folder using pyhon
+
+# pip install sqlalchemy for using sqlalchemy
